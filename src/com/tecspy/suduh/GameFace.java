@@ -33,17 +33,21 @@ import org.eclipse.wb.swt.SWTResourceManager;
 public class GameFace extends Composite {
 	private Canvas canvas;
 	private Geometry geom;
-	Color boxLineSmall;
-	Color boxLineBig;
+	private Color boxLineSmall;
+	private Color boxLineBig;
+	private Color clrHint;
+	private Color clrSelectedCell;
+	private Color clrBackground;
+
 	private Font fontHint;
 	private int[] hints = new int[9 * 9];
 	private int[] cellOffsets = null;
 	private Point hintOffset;
 	private int hintPos;
+	private Point sel = new Point(0, 0);
 
 	// TODO Selected cell
 	// TODO click to select cell
-	private Point cellSelected = null;
 	private ClickListener listener = new ClickListener();
 
 	public class ClickListener implements MouseListener {
@@ -102,7 +106,23 @@ public class GameFace extends Composite {
 
 	public void selectCellAt(int x, int y) {
 		log.debug("selectCellAt " + x + " " + y);
+		int cx = pixelToCell(x);
+		int cy = pixelToCell(y);
+		log.debug("cell " + cx + " " + cy);
+		sel.x = cx;
+		sel.y = cy;
+		canvas.redraw();
 
+	}
+
+	private int pixelToCell(int x) {
+		for (int i = 0; i < cellOffsets.length; i++) {
+			int e = cellOffsets[i];
+			if (e > x) {
+				return i - 1;
+			}
+		}
+		return -1;
 	}
 
 	private void stealResources() {
@@ -110,6 +130,9 @@ public class GameFace extends Composite {
 		boxLineBig = SWTResourceManager.getColor(SWT.COLOR_DARK_BLUE);
 		fontHint = SWTResourceManager.getFont("Bitstream Vera Sans Mono", 8,
 				SWT.NORMAL);
+		clrHint = SWTResourceManager.getColor(SWT.COLOR_YELLOW);
+		clrSelectedCell = SWTResourceManager.getColor(SWT.COLOR_CYAN);
+		clrBackground = SWTResourceManager.getColor(SWT.COLOR_DARK_GREEN);
 
 	}
 
@@ -132,7 +155,7 @@ public class GameFace extends Composite {
 		int cs = geom.getCellSize();
 		int gutter = geom.getGutter();
 
-		// setup required...
+		// Setup is required if cellOffsets is not set...
 		if (cellOffsets == null) {
 			cellOffsets = new int[10];
 			for (int ix = 0; ix < 10; ix++) {
@@ -144,21 +167,44 @@ public class GameFace extends Composite {
 			hintOffset.y /= 2;
 			hintPos = cs / 4;
 		}
-
+		drawSelectedCellHighlight(gc, cs);
 		// grid graphics...
 		gc.setLineWidth(3);
 		drawGridLines(gc, cs, gutter);
 		// show hint text
-		gc.setForeground(disp.getSystemColor(SWT.COLOR_YELLOW));
+		gc.setForeground(clrHint);
 		gc.setFont(fontHint);
 		drawHints(gc);
+	}
+
+	private void drawSelectedCellHighlight(GC gc, int cs) {
+		if (sel.x == -1 || sel.y == -1)
+			return;
+		gc.setBackground(clrSelectedCell);
+		gc.fillRectangle(cellOffsets[sel.x], cellOffsets[sel.x], cs, cs);
 	}
 
 	private void drawHints(GC gc) {
 		// 9 * 9 array of sets of hints...
 		for (int i = 0; i < hints.length; i++) {
+			boolean cellIndexIsSelected = isCellIndexSelected(i);
+			if (cellIndexIsSelected)
+				gc.setBackground(clrSelectedCell);
 			drawHintSet(gc, cellOffsets[i % 9], cellOffsets[i / 9], hints[i]);
+			if (cellIndexIsSelected)
+				gc.setBackground(clrBackground);
 		}
+	}
+
+	/**
+	 * Is the cell at this index [0..80] selected?
+	 * 
+	 * @param ix
+	 *            the index
+	 * @return selected
+	 */
+	private boolean isCellIndexSelected(int ix) {
+		return ((ix / 9 == sel.y) && (ix % 9 == sel.x));
 	}
 
 	/**
@@ -195,27 +241,23 @@ public class GameFace extends Composite {
 	}
 
 	private void drawGridLines(GC gc, int cs, int gutter) {
-		// two passes: first for small box lines then big box lines...
-		for (int i = 0; i < 2; i++) {
-			boolean bigbox = (i == 1);
+		// four passes: small box, big box, horizontal, vertical...
+		int start = cellOffsets[0];
+		int end = cellOffsets[9];
+		for (int i = 0; i < 4; i++) {
+			boolean horiz = (i % 2) == 0;
+			boolean bigbox = (i >= 2);
 			gc.setForeground(bigbox ? boxLineBig : boxLineSmall);
-			int y1 = gutter;
-			int y2 = gutter + (cs * 9);
 			for (int ix = 0; ix <= 9; ix++) {
 				boolean bigboxline = (ix % 3 == 0);
 				if ((bigboxline && !bigbox) || (!bigboxline && bigbox))
 					continue;
-				int x = gutter + (cs * ix);
-				gc.drawLine(x, y1, x, y2);
-			}
-			int x1 = gutter;
-			int x2 = gutter + (cs * 9);
-			for (int ix = 0; ix <= 9; ix++) {
-				boolean bigboxline = (ix % 3 == 0);
-				if ((bigboxline && !bigbox) || (!bigboxline && bigbox))
-					continue;
-				int y = gutter + (cs * ix);
-				gc.drawLine(x1, y, x2, y);
+				int p = cellOffsets[ix];
+				int x1 = horiz ? start : p;
+				int x2 = horiz ? end : p;
+				int y1 = horiz ? p : start;
+				int y2 = horiz ? p : end;
+				gc.drawLine(x1, y1, x2, y2);
 			}
 		}
 	}
