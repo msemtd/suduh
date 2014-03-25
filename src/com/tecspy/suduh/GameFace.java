@@ -1,9 +1,13 @@
 package com.tecspy.suduh;
 
+import lombok.extern.log4j.Log4j;
+
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Color;
@@ -17,6 +21,15 @@ import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.wb.swt.SWTResourceManager;
 
+/**
+ * 
+ * 
+ * 
+ * 
+ * @author michael.erskine
+ * 
+ */
+@Log4j
 public class GameFace extends Composite {
 	private Canvas canvas;
 	private Geometry geom;
@@ -28,6 +41,29 @@ public class GameFace extends Composite {
 	private Point hintOffset;
 	private int hintPos;
 
+	// TODO Selected cell
+	// TODO click to select cell
+	private Point cellSelected = null;
+	private ClickListener listener = new ClickListener();
+
+	public class ClickListener implements MouseListener {
+		@Override
+		public void mouseDoubleClick(MouseEvent e) {
+		}
+
+		@Override
+		public void mouseDown(MouseEvent e) {
+			selectCellAt(e.x, e.y);
+		}
+
+		@Override
+		public void mouseUp(MouseEvent e) {
+			if (e.count == 1) {
+				// System.out.println("Mouse up");
+			}
+		}
+	}
+
 	/**
 	 * Create the composite.
 	 * 
@@ -37,7 +73,11 @@ public class GameFace extends Composite {
 	public GameFace(Composite parent, int style) {
 		super(parent, style);
 		setLayout(new FormLayout());
-		geom = Suduh.getInstance().getGeom();
+
+		Suduh s = Suduh.getInstance();
+		if (s == null)
+			return;
+		geom = s.getGeom();
 		stealResources();
 
 		canvas = new Canvas(this, SWT.NONE);
@@ -57,6 +97,12 @@ public class GameFace extends Composite {
 				}
 			}
 		});
+		canvas.addMouseListener(listener);
+	}
+
+	public void selectCellAt(int x, int y) {
+		log.debug("selectCellAt " + x + " " + y);
+
 	}
 
 	private void stealResources() {
@@ -111,16 +157,27 @@ public class GameFace extends Composite {
 	private void drawHints(GC gc) {
 		// 9 * 9 array of sets of hints...
 		for (int i = 0; i < hints.length; i++) {
-			drawHintSet(gc, i % 9, i / 9, hints[i]);
+			drawHintSet(gc, cellOffsets[i % 9], cellOffsets[i / 9], hints[i]);
 		}
 	}
 
+	/**
+	 * Draw this set of hints
+	 * 
+	 * @param gc
+	 * @param cx
+	 *            cell origin X
+	 * @param cy
+	 *            cell origin Y
+	 * @param h
+	 *            hint data
+	 */
 	private void drawHintSet(GC gc, int cx, int cy, int h) {
 		for (int i = 0; i < 9; i++) {
 			if (!hintOn(h, i + 1))
 				continue;
-			int tx = cx + ((i % 3) * hintPos) - hintOffset.x;
-			int ty = cy + ((i / 3) * hintPos) - hintOffset.y;
+			int tx = cx + (((i % 3) + 1) * hintPos) - hintOffset.x;
+			int ty = cy + (((i / 3) + 1) * hintPos) - hintOffset.y;
 			gc.drawText("" + (i + 1), tx, ty);
 		}
 	}
@@ -133,7 +190,8 @@ public class GameFace extends Composite {
 	 * @return
 	 */
 	private static boolean hintOn(int hdata, int hintNumber) {
-		return ((hdata >> (hintNumber - 1)) & 0x01) == 1;
+		return true;
+		// return ((hdata >> (hintNumber - 1)) & 0x01) == 1;
 	}
 
 	private void drawGridLines(GC gc, int cs, int gutter) {

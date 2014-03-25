@@ -2,7 +2,9 @@ package com.tecspy.suduh;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j;
 
+import org.apache.log4j.BasicConfigurator;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.StatusLineManager;
 import org.eclipse.jface.action.ToolBarManager;
@@ -21,6 +23,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 
+@Log4j
 public class Suduh extends ApplicationWindow {
 	private GameFace gameFace;
 	private Text textSqSize;
@@ -51,7 +54,7 @@ public class Suduh extends ApplicationWindow {
 		Composite container = new Composite(parent, SWT.NONE);
 
 		gameFace = new GameFace(container, SWT.NONE);
-		gameFace.setBounds(0, 0, 621, 418);
+		gameFace.setBounds(0, 0, 418, 418);
 		gameFace.setLayout(null);
 
 		textSqSize = new Text(container, SWT.BORDER);
@@ -90,6 +93,7 @@ public class Suduh extends ApplicationWindow {
 	}
 
 	private void ready() {
+		log.info("Started");
 		int sqSize = gameFace.getCellSize();
 		textSqSize.setText("" + sqSize);
 		textSqSize.addListener(SWT.Verify, new Listener() {
@@ -154,6 +158,7 @@ public class Suduh extends ApplicationWindow {
 	 * @param args
 	 */
 	public static void main(String args[]) {
+		BasicConfigurator.configure();
 		try {
 			Suduh window = new Suduh();
 			instance = window;
